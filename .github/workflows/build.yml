@@ -1,0 +1,50 @@
+name: Build Project
+
+run-name: Build Node Js Project by ${{ github.actor }}
+
+on:
+    pull_request: 
+        branches: [ test ]
+
+jobs:
+    build-nodeapp:
+        runs-on: ${{ matrix.os }}
+    
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+                node: [18, 20]
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Setup Node Js
+              uses: actions/setup-node@v4
+              with:
+                node-version: ${{ matrix.node }}
+            - name: Install dependencies
+              run: npm install
+            - name: Run Tests
+              run: npm run test
+            - name: Build app
+              run: npm run build
+            - name: Upload artifactory
+              if: ${{ matrix.os == 'ubuntu-latets' && matrix.node == 18 }}
+              uses: actions/upload-pages-artifact@v3
+              with:
+                path: public/
+    deploy-nodeapp:        
+        needs: build-nodeapp
+        # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+        permissions:
+            pages: write      # to deploy to Pages
+            id-token: write   # to verify the deployment originates from an appropriate source
+        # Deploy to the github-pages environment
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        
+        runs-on: ubuntu-latest
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4 
